@@ -83,14 +83,11 @@ runs:
         REFLOW_HOME:  .github/reflow
         REFLOW_DEBUG: 1
       run: |
-        cat >debug.json <<EOF
-        ${{ toJson(github) }}
-        ${{ toJson(inputs) }}
-        EOF
-
         cat <<EOF | reflow manifest
-        ${{ toJson(github) }}
-        ${{ toJson(inputs) }}
+        {
+          "github": ${{ toJson(github) }},
+          "inputs": ${{ toJson(inputs) }}
+        }
         EOF
       shell: ${{ steps.var.outputs.shell }}
     - name: Reflow call workflow
@@ -119,7 +116,6 @@ runs:
       with:
         name: reflow-debug
         path: |
-          debug.json
           .github/reflow/runs/${{ steps.manifest.outputs.run-id }}/**
     - name: Cleanup
       if: ${{ always() }}
