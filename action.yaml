@@ -65,7 +65,7 @@ runs:
         token:      ${{ steps.var.outputs.token }}
     - name: Install reflow
       env:
-        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.0/reflow-linux-amd64
+        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.1/reflow-linux-amd64
       run: |
         do_curl() {
           curl --disable --fail --fail-early --location --connect-timeout 10 --show-error --silent $1
@@ -81,6 +81,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.var.outputs.token }}
         REFLOW_HOME:  .github/reflow
+        REFLOW_DEBUG: 1
       run: |
         cat <<EOF | reflow manifest
         ${{ toJson(github) }}
@@ -91,6 +92,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ steps.var.outputs.token }}
         REFLOW_HOME:  .github/reflow
+        REFLOW_DEBUG: 1
       run: |
         reflow run ${{ steps.manifest.outputs.run-id }}
       shell:  ${{ steps.var.outputs.shell }}
