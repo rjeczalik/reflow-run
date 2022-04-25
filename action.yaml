@@ -1,0 +1,120 @@
+name: reflow-run
+description: |
+  Action for dispatching workflow runs from public and private repositories.
+
+inputs:
+  token:
+    description: GitHub token to use (github.token by default)
+    required:    false
+    type:        string
+  uses:
+    description: Manual workflow to call, e.g. owner/repo/.github/workflows/workflow.yaml@master
+    required:    true
+    type:        string
+  values:
+    description: YAML-encoded object to pass as {{ .values }} during template evaluation
+    required:    false
+    type:        string
+  inputs:
+    description: Input variables for the workflow dispatch event
+    required:    true
+    type:        string
+  checkout_target:
+    description: Whether to checkout target repository to make use of its .github/reflow files
+    required:    true
+    type:        string
+    default:     'true'
+  debug:
+    description: Whether to debug shell commands
+    required:    true
+    type:        string
+    default:     'false'
+
+outputs:
+  values:
+    description: .values object encoded as JSON
+    value:       ${{ steps.reflow.outputs.values }}
+  outputs:
+    description: .outputs object encoded as JSON
+    value:       ${{ steps.reflow.outputs.outputs }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up variables
+      id:   var
+      run: |
+        cat <<EOF
+        ::add-mask::${{ inputs.token || github.token }}
+        ::set-output name=token::${{ inputs.token || github.token }}
+        ::set-output name=repository::$(echo ${{ inputs.uses }} | cut -d/ -f1,2)
+        ::set-output name=ref::$(echo ${{ inputs.uses }} | cut -d@ -f2)
+        EOF
+
+        if [[ "${{ inputs.debug }}" == "true" ]]; then
+          echo "::set-output name=shell::bash --noprofile --norc -e -o pipefail -x {0}"
+        else
+          echo "::set-output name=shell::bash --noprofile --norc -e -o pipefail {0}"
+        fi
+      shell: bash
+    - uses: actions/checkout@v3
+      if:   ${{ inputs.checkout_target == 'true' }}
+      with:
+        repository: ${{ steps.var.outputs.repository }}
+        ref:        ${{ steps.var.outputs.ref }}
+        token:      ${{ steps.var.outputs.token }}
+    - name: Install reflow
+      env:
+        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.0/reflow-linux-amd64
+      run: |
+        do_curl() {
+          curl --disable --fail --fail-early --location --connect-timeout 10 --show-error --silent $1
+        }
+
+        mkdir -p .github/reflow/bin
+        do_curl "$REFLOW_URL" > .github/reflow/bin/reflow
+        chmod +x .github/reflow/bin/reflow
+        echo "PATH=$(pwd)/.github/reflow/bin:$PATH" >> $GITHUB_ENV
+      shell: ${{ steps.var.outputs.shell }}
+    - name: Create run manifest
+      id:   manifest
+      env:
+        GITHUB_TOKEN: ${{ steps.var.outputs.token }}
+        REFLOW_HOME:  .github/reflow
+      run: |
+        cat <<EOF | reflow manifest
+        ${{ toJson(github) }}
+        ${{ toJson(inputs) }}
+        EOF
+      shell: ${{ steps.var.outputs.shell }}
+    - name: Reflow call workflow
+      env:
+        GITHUB_TOKEN: ${{ steps.var.outputs.token }}
+        REFLOW_HOME:  .github/reflow
+      run: |
+        reflow run ${{ steps.manifest.outputs.run-id }}
+      shell:  ${{ steps.var.outputs.shell }}
+    - name: Export outputs
+      id:   reflow
+      run: |
+        pushd .github/reflow/runs/$
+
+        cat <<EOF
+        ::set-output name=values::123
+        EOF
+
+        cat <<EOF
+        ::set-output name=outputs::123
+        EOF
+      shell:  ${{ steps.var.outputs.shell }}
+    - uses: actions/upload-artifact@v3
+      if:   ${{ always() && inputs.debug == 'true' }}
+      with:
+        name: reflow-debug
+        path: |
+          .github/reflow/runs/${{ steps.manifest.outputs.run-id }}/**
+    - name: Cleanup
+      if: ${{ always() }}
+      run: |
+        rm -rfv .github/reflow/runs/${{ steps.manifest.outputs.run-id }}
+      shell: ${{ steps.var.outputs.shell }}
