@@ -101,7 +101,7 @@ runs:
     - name: Export outputs
       id:   reflow
       run: |
-        pushd .github/reflow/runs/$
+        pushd .github/reflow/runs/${{ steps.manifest.outputs.run-id }}
 
         cat <<EOF
         ::set-output name=values::123
