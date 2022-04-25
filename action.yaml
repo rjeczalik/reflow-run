@@ -80,12 +80,7 @@ runs:
         REFLOW_HOME:  .github/reflow
         REFLOW_DEBUG: 1
       run: |
-        cat <<EOF | reflow manifest
-        {
-          "github": ${{ toJson(github) }},
-          "inputs": ${{ toJson(inputs) }}
-        }
-        EOF
+        echo '{"github": ${{ toJson(github) }}, "inputs": ${{ toJson(inputs) }} }' | reflow manifest
       shell: ${{ steps.var.outputs.shell }}
     - name: Reflow call workflow
       env:
