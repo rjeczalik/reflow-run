@@ -31,9 +31,6 @@ inputs:
     default:     'false'
 
 outputs:
-  values:
-    description: .values object encoded as JSON
-    value:       ${{ steps.reflow.outputs.values }}
   outputs:
     description: .outputs object encoded as JSON
     value:       ${{ steps.reflow.outputs.outputs }}
@@ -65,7 +62,7 @@ runs:
         token:      ${{ steps.var.outputs.token }}
     - name: Install reflow
       env:
-        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.2/reflow-linux-amd64
+        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.6.0/reflow-linux-amd64
       run: |
         do_curl() {
           curl --disable --fail --fail-early --location --connect-timeout 10 --show-error --silent $1
@@ -101,14 +98,8 @@ runs:
     - name: Export outputs
       id:   reflow
       run: |
-        pushd .github/reflow/runs/${{ steps.manifest.outputs.run-id }}
-
         cat <<EOF
-        ::set-output name=values::123
-        EOF
-
-        cat <<EOF
-        ::set-output name=outputs::123
+        ::set-output name=outputs::$(cat .github/reflow/runs/${{ steps.manifest.outputs.run-id }}/outputs/outputs.json)
         EOF
       shell:  ${{ steps.var.outputs.shell }}
     - uses: actions/upload-artifact@v3
