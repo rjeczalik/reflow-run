@@ -65,7 +65,7 @@ runs:
         token:      ${{ steps.var.outputs.token }}
     - name: Install reflow
       env:
-        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.1/reflow-linux-amd64
+        REFLOW_URL: https://github.com/rjeczalik/reflow/releases/download/v1.5.2/reflow-linux-amd64
       run: |
         do_curl() {
           curl --disable --fail --fail-early --location --connect-timeout 10 --show-error --silent $1
